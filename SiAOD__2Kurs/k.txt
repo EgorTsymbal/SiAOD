@@ -226,7 +226,7 @@ void show_list(Record* ind_arr[], int n = N)
 	}
 }
 
-void sh_l(Record* ind_arr[], int n)
+void sh_l(Record* ind_arr[], int n=N)
 {
 	int ind = 0;
 	while (true)
@@ -242,16 +242,14 @@ void sh_l(Record* ind_arr[], int n)
 		cout << "| Record |                  FIO                | Street              | Apartment_number | House_number | Settlement date |\n";
 		cout << "--------------------------------------------------------------------------------------------------------------------------\n";
 		string chose = prompt(
-			"_________________________________________________________________________\n"
+			"_________________________________________\n"
 			"| w: Next page |\t"
-			"| q: Last page  |\t"
-			"| e: Skip 10 next pages |\n"
+			"| q: Last page  |\n"
 			"| s: Prev page |\t"
-			"| a: First page |\t"
-			"| d: Skip 10 prev pages |\n"
-			"|_______________________________________________________________________|\n"
-			"| Any key: Exit                                                         |\n"
-			"|_______________________________________________________________________|\n");
+			"| a: First page |\n"
+			"|_______________________________________|\n"
+			"| Any key: Exit                         |\n"
+			"|_______________________________________|\n");
 
 		switch (chose[0])
 		{
@@ -266,12 +264,6 @@ void sh_l(Record* ind_arr[], int n)
 			break;
 		case 'q':
 			ind = n - 20;
-			break;
-		case 'd':
-			ind -= 200;
-			break;
-		case 'e':
-			ind += 200;
 			break;
 		default:
 			return;
@@ -316,7 +308,6 @@ int quick_search(Record* arr[], char* key)
 	}
 	return -1;
 }
-
 
 
 void search(Record* arr[], int& ind, int& n)
@@ -610,7 +601,7 @@ void tree(Record* arr[], int n)
 			i = 1;
 			search_in_tree(root, key, i);
 		}
-		cout << "Input search key (full birth date), q - exit\n> ";
+		cout << "Input search key (full settlement date date), q - exit\n> ";
 	} while (key[0] != 'q');
 
 	rmtree(root);
