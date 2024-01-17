@@ -1,0 +1,825 @@
+#include <iostream>
+#include <iomanip>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <map>
+#include <list>
+#include <cmath>
+#include <unordered_map>
+#include <algorithm>
+#include <string.h>
+#include <locale.h>
+
+using namespace std;
+#define MAX_CHAR_LEN 256
+const int N = 4000;
+int code_index = 0;
+
+
+typedef struct gbc {
+	long double Q;
+	long double P;
+	unsigned char c;
+	short int L;
+} gbc;
+
+struct Record
+{
+	char fio[32];
+	char street[18];
+	short int apartment_number;
+	short int house_number;
+	char settlement_date[10];
+};
+
+struct Node
+{
+	Record record;
+	Node* next;
+};
+
+string prompt(const string& str)
+{
+	cout << str;
+	cout << "\n> ";
+	string ans;
+	cin >> ans;
+	return ans;
+}
+
+Node* load_to_memory()
+{
+	ifstream file("TestBase4.dat", ios::binary);
+	if (!file.is_open())
+	{
+		return NULL;
+	}
+
+	Node* root = NULL;
+
+	for (int i = 0; i < N; ++i)
+	{
+		Record record;
+		file.read((char*)&record, sizeof(Record));
+		root = new Node{ record, root };
+	}
+
+	file.close();
+	return root;
+}
+
+void make_index_array(Record* arr[], Node* root, int n = N)
+{
+	Node* p = root;
+	for (int i = 0; i < n; i++)
+	{
+		arr[i] = &(p->record);
+		p = p->next;
+	}
+}
+
+
+void digitalSort(Node*& head, const int KDI[])
+{
+	int L = KDI[0] + KDI[1];
+	Node* p;
+	struct Queue
+	{
+		Node* tail;
+		Node* head;
+	} q[256];
+
+	for (int j = 0; j < L; j++)
+	{
+		for (int i = 0; i < 256; i++)
+		{
+			q[i].tail = NULL;
+			q[i].head = NULL;
+		}
+
+		p = head;
+		while (p)
+		{
+			int d{};
+			if (j < KDI[1])
+			{
+				d = 255 - abs(p->record.street[L - j - 1 - KDI[0]]);
+			}
+			else if (j < KDI[1] + KDI[0])
+			{
+				std::string dateStr = p->record.settlement_date;
+
+				if (dateStr.length() >= 8)
+				{
+					if (j == KDI[1] + KDI[0] - 1)  
+					{
+						d = std::stoi(dateStr.substr(dateStr.length() - 2));
+					}
+					else if (j == KDI[1] + KDI[0] - 3)  
+					{
+						d = std::stoi(dateStr.substr(dateStr.length() - 5, 2));
+					}
+					else if (j == KDI[1] + KDI[0] - 6)  
+					{
+						d = std::stoi(dateStr.substr(0, 2));
+					}
+				}
+			}
+			Node* nextNode = p->next;
+			p->next = NULL;
+
+			if (q[d].head == NULL)
+			{
+				q[d].head = p;
+				q[d].tail = p;
+			}
+			else
+			{
+				q[d].tail->next = p;
+				q[d].tail = p;
+			}
+
+			p = nextNode;
+		}
+
+		int i = 0;
+		while (q[i].head == NULL)
+		{
+			i++;
+		}
+
+		head = q[i].head;
+		Node* tail = q[i].tail;
+
+		for (int k = i + 1; k < 256; k++)
+		{
+			if (q[k].head != NULL)
+			{
+				tail->next = q[k].head;
+				tail = q[k].tail;
+			}
+		}
+	}
+}
+
+
+
+
+
+
+void print_head()
+{
+	cout << "--------------------------------------------------------------------------------------------------------------------------\n";
+	cout << "| Record |                  FIO                | Street              | Apartment_number | House_number | Settlement date |\n";
+	cout << "--------------------------------------------------------------------------------------------------------------------------\n";
+}
+
+void print_record(Record* record, int i)
+{
+	cout << "[" << setw(4) << i << "]"
+		<< " " << record->fio << setw(10)
+		<< " " << record->street << setw(10)
+		<< " " << setw(5) << record->apartment_number << setw(10)
+		<< " " << setw(5) << record->house_number << setw(10)
+		<< " " << setw(8) << record->settlement_date << "\n";
+}
+
+void show_list(Record* ind_arr[], int n = N)
+{
+	int ind = 0;
+	while (true)
+	{
+		system("CLS");
+		print_head();
+		for (int i = 0; i < 20; i++)
+		{
+			Record* record = ind_arr[ind + i];
+			print_record(record, ind + i + 1);
+		}
+		cout << "--------------------------------------------------------------------------------------------------------------------------\n";
+		cout << "| Record |                  FIO                | Street              | Apartment_number | House_number | Settlement date |\n";
+		cout << "--------------------------------------------------------------------------------------------------------------------------\n";
+		string chose = prompt(
+			"_________________________________________________________________________\n"
+			"| w: Next page |\t"
+			"| q: Last page  |\t"
+			"| e: Skip 10 next pages |\n"
+			"| s: Prev page |\t"
+			"| a: First page |\t"
+			"| d: Skip 10 prev pages |\n"
+			"|_______________________________________________________________________|\n"
+			"| Any key: Exit                                                         |\n"
+			"|_______________________________________________________________________|\n");
+
+		switch (chose[0])
+		{
+		case 'w':
+			ind += 20;
+			break;
+		case 's':
+			ind -= 20;
+			break;
+		case 'a':
+			ind = 0;
+			break;
+		case 'q':
+			ind = n - 20;
+			break;
+		case 'd':
+			ind -= 200;
+			break;
+		case 'e':
+			ind += 200;
+			break;
+		default:
+			return;
+		}
+
+		if (ind < 0)
+		{
+			ind = 0;
+		}
+		else if (ind > n - 20)
+		{
+			ind = n - 20;
+		}
+	}
+}
+
+void sh_l(Record* ind_arr[], int n = N)
+{
+	int ind = 0;
+	while (true)
+	{
+		system("CLS");
+		print_head();
+		for (int i = 0; i < 20 && (ind + i) < n; i++)
+		{
+			Record* record = ind_arr[ind + i];
+			print_record(record, ind + i + 1);
+		}
+		cout << "--------------------------------------------------------------------------------------------------------------------------\n";
+		cout << "| Record |                  FIO                | Street              | Apartment_number | House_number | Settlement date |\n";
+		cout << "--------------------------------------------------------------------------------------------------------------------------\n";
+		string chose = prompt(
+			"_________________________________________\n"
+			"| w: Next page |\t"
+			"| q: Last page  |\n"
+			"| s: Prev page |\t"
+			"| a: First page |\n"
+			"|_______________________________________|\n"
+			"| Any key: Exit                         |\n"
+			"|_______________________________________|\n");
+
+		switch (chose[0])
+		{
+		case 'w':
+			ind += 20;
+			break;
+		case 's':
+			ind -= 20;
+			break;
+		case 'a':
+			ind = 0;
+			break;
+		case 'q':
+			ind = n - 20;
+			break;
+		default:
+			return;
+		}
+
+		if (ind < 0)
+		{
+			ind = 0;
+		}
+		else if (ind > n - 20)
+		{
+			ind = n - 20;
+		}
+	}
+}
+
+
+int quick_search(Record* arr[], char* key)
+{
+	char baff[2];
+	int l = 0;
+	int r = N - 1;
+	while (l < r)
+	{
+		int m = (l + r) / 2;
+		baff[0] = (arr[m]->settlement_date)[6];
+		baff[1] = (arr[m]->settlement_date)[7];
+		if (strncmp((baff), key, 2) < 0)
+		{
+			l = m + 1;
+		}
+		else
+		{
+			r = m;
+		}
+	}
+	baff[0] = (arr[r]->settlement_date)[6];
+	baff[1] = (arr[r]->settlement_date)[7];
+	if (strncmp((baff), key, 2) == 0)
+	{
+		return r;
+	}
+	return -1;
+}
+
+
+void search(Record* arr[], int& ind, int& n)
+{
+	Node* head = nullptr;
+	Node* tail = nullptr;
+	char baff[2];
+	char key[3];
+	cout << "Input search key (last two characters of the year): ";
+	cin >> key;
+	ind = quick_search(arr, key);
+	if (ind == -1)
+	{
+		cout << "Not found" << endl;
+	}
+	else
+	{
+		head = new Node{ *arr[ind], nullptr };
+		tail = head;
+		int i;
+		i = ind + 1;
+		baff[0] = (arr[i]->settlement_date)[6];
+		baff[1] = (arr[i]->settlement_date)[7];
+		for (; i < 3999 &&
+			strncmp(baff, key, 2) == 0; ++i, baff[0] = (arr[i]->settlement_date)[6], baff[1] = (arr[i]->settlement_date)[7])
+		{
+			tail->next = new Node{ *arr[i], nullptr };
+			tail = tail->next;
+		}
+		n = i - ind;
+		auto find_arr = new Record * [n];
+		make_index_array(find_arr, head, n);
+		sh_l(find_arr, n);
+		delete[] find_arr;
+	}
+}
+
+int strcomp(const string& str1, const string& str2, int len = -1)
+{
+	if (len == -1)
+	{
+		len = (int)str1.length();
+	}
+	for (int i = 0; i < len; ++i)
+	{
+		if (str1[i] == '\0' && str2[i] == '\0')
+		{
+			return 0;
+		}
+		else if (str1[i] == ' ' && str2[i] != ' ')
+		{
+			return -1;
+		}
+		else if (str1[i] != ' ' && str2[i] == ' ')
+		{
+			return 1;
+		}
+		else if (str1[i] < str2[i])
+		{
+			return -1;
+		}
+		else if (str1[i] > str2[i])
+		{
+			return 1;
+		}
+	}
+	return 0;
+}
+
+struct Vertex
+{
+	Record* data;
+	Vertex* left;
+	Vertex* right;
+	int balance;
+
+	Vertex(Record* data, Vertex* left = nullptr, Vertex* right = nullptr, int balance = 0) : data(data), left(left), right(right), balance(balance) {}
+};
+
+bool grow;
+
+void ll(Vertex*& p)
+{
+	Vertex* q = p->left;
+	p->balance = q->balance = 0;
+	p->left = q->right;
+	q->right = p;
+	p = q;
+}
+
+void rr(Vertex*& p)
+{
+	Vertex* q = p->right;
+	p->balance = q->balance = 0;
+	p->right = q->left;
+	q->left = p;
+	p = q;
+}
+
+void lr(Vertex*& p)
+{
+	Vertex* q = p->left;
+	Vertex* r = q->right;
+	if (r->balance < 0)
+	{
+		p->balance = 1;
+	}
+	else
+	{
+		p->balance = 0;
+	}
+	if (r->balance > 0)
+	{
+		q->balance = -1;
+	}
+	else
+	{
+		q->balance = 0;
+	}
+	r->balance = 0;
+	q->right = r->left;
+	p->left = r->right;
+	r->left = q;
+	r->right = p;
+	p = r;
+}
+
+void rl(Vertex*& p)
+{
+	Vertex* q = p->right;
+	Vertex* r = q->left;
+	if (r->balance > 0)
+	{
+		p->balance = -1;
+	}
+	else
+	{
+		p->balance = 0;
+	}
+	if (r->balance < 0)
+	{
+		q->balance = 1;
+	}
+	else
+	{
+		q->balance = 0;
+	}
+	r->balance = 0;
+	q->left = r->right;
+	p->right = r->left;
+	r->right = q;
+	r->left = p;
+	p = r;
+}
+
+void add_to_avl(Vertex*& p, Record* data)
+{
+	if (!p)
+	{
+		p = new Vertex(data);
+		grow = true;
+	}
+	else if (strcomp(p->data->settlement_date, data->settlement_date) == 1)
+	{
+		add_to_avl(p->left, data);
+		if (grow)
+		{
+			if (p->balance > 0)
+			{
+				p->balance = 0;
+				grow = false;
+			}
+			else if (p->balance == 0)
+			{
+				p->balance = -1;
+				grow = true;
+			}
+			else
+			{
+				if (p->left->balance < 0)
+				{
+					ll(p);
+					grow = false;
+				}
+				else
+				{
+					lr(p);
+					grow = false;
+				}
+			}
+		}
+	}
+	else if (strcomp(p->data->settlement_date, data->settlement_date) <= 0)
+	{
+		add_to_avl(p->right, data);
+		if (grow)
+		{
+			if (p->balance < 0)
+			{
+				p->balance = 0;
+				grow = false;
+			}
+			else if (p->balance == 0)
+			{
+				p->balance = 1;
+				grow = true;
+			}
+			else
+			{
+				if (p->right->balance > 0)
+				{
+					rr(p);
+					grow = false;
+				}
+				else
+				{
+					rl(p);
+					grow = false;
+				}
+			}
+		}
+	}
+	else
+	{
+		cout << "Data already exists";
+	}
+}
+
+void Print_tree(Vertex* p, int& i)
+{
+	if (p)
+	{
+		Print_tree(p->left, i);
+		print_record(p->data, i++);
+		Print_tree(p->right, i);
+	}
+}
+
+void search_in_tree(Vertex* root, const string& key, int& i)
+{
+	if (root)
+	{
+		if (strcomp(key, root->data->settlement_date) < 0)
+		{
+			search_in_tree(root->left, key, i);
+		}
+		else if (strcomp(key, root->data->settlement_date) > 0)
+		{
+			search_in_tree(root->right, key, i);
+		}
+		else if (strcomp(key, root->data->settlement_date) == 0)
+		{
+			search_in_tree(root->left, key, i);
+			print_record(root->data, i++);
+			search_in_tree(root->right, key, i);
+		}
+	}
+}
+
+void rmtree(Vertex* root)
+{
+	if (root)
+	{
+		rmtree(root->right);
+		rmtree(root->left);
+		delete root;
+	}
+}
+
+void tree(Record* arr[], int n)
+{
+	Vertex* root = nullptr;
+
+	for (int i = 0; i < n; ++i)
+	{
+		add_to_avl(root, arr[i]);
+	}
+
+	print_head();
+
+	int i = 1;
+	Print_tree(root, i);
+
+	string key;
+	do
+	{
+		getline(cin, key);
+		if (!key.empty() && key != "q")
+		{
+			print_head();
+			i = 1;
+			search_in_tree(root, key, i);
+		}
+		cout << "Input search key (full settlement date date), q - exit\n> ";
+	} while (key[0] != 'q');
+
+	rmtree(root);
+}
+
+
+void QuickSort(long long L, long long R, gbc* A) {
+	while (L < R) {
+		long double x = A[(L + R) / 2].P;
+		long i = L;
+		long j = R;
+		while (i <= j) {
+			while (A[i].P > x) {
+				i++;
+			}
+			while (A[j].P < x) {
+				j--;
+			}
+			if (i <= j) {
+				gbc B = A[i];
+				A[i] = A[j];
+				A[j] = B;
+				i++;
+				j--;
+			}
+		}
+		if (j - L > R - i) {
+			QuickSort(L, j, A);
+			L = i;
+		}
+		else {
+			QuickSort(i, R, A);
+			R = j;
+		}
+	}
+}
+
+
+void gilbert_moore_alg(const int alphabet_size, gbc* code, char** codes) {
+	long double pr = 0.0;
+	for (int i = code_index - 1; i < alphabet_size; i++) {
+		code[i].Q = pr + code[i].P / 2;
+		pr += code[i].P;
+		code[i].L = -ceil(log2(code[i].P)) + 1;
+	}
+	for (int i = code_index - 1; i < alphabet_size; i++) {
+		for (int j = 0; j < alphabet_size; j++) {
+			code[i].Q = code[i].Q * 2;
+			codes[i][j] = floor(code[i].Q);
+			if (code[i].Q > 1) code[i].Q -= 1;
+		}
+	}
+}
+
+void BaseCoding(gbc* A, int* sum, long double* entropy, int* sym_count, char** codes) {
+	FILE* f;
+	fopen_s(&f, "TestBase4.dat", "rb");
+	for (int i = 0; i < MAX_CHAR_LEN; i++) {
+		A[i].P = 0.0;
+		A[i].L = 0;
+		A[i].Q = 0.0;
+		A[i].c = (char)(i - 128);
+	}
+	while (!feof(f)) {
+		char c;
+		fscanf_s(f, "%c", &c);
+		if (feof(f)) break;
+		A[c + 128].P++;
+		(*sum)++;
+	}
+	fclose(f);
+	code_index = 0;
+	QuickSort(0, MAX_CHAR_LEN - 1, A);
+	while (A[code_index++].P == 0.0) {
+
+	}
+	for (int i = code_index - 1; i < MAX_CHAR_LEN && A[i].P != 0.0; i++) {
+		A[i].P /= *sum;
+		A[i].Q = A[i].P;
+		*entropy += A[i].P * log2(A[i].P);
+		(*sym_count)++;
+	}
+	*entropy = -*entropy;
+	gilbert_moore_alg(MAX_CHAR_LEN, A, codes);
+}
+
+void CodePrint(gbc* A, long double entropy, char** codes) {
+	long double lgm = 0;
+	cout << "\n\nOptimal code of Gilbert_Moore: \n";
+	cout << "-------------------------------------------------------------------------------\n";
+	cout << "| Symbol num | Symbol | Probability | Code word | Code word len |\n";
+	cout << "|-----------------------------------------------------------------------------|\n";
+	for (int i = code_index - 1; i < MAX_CHAR_LEN && A[i].P != 0.0; i++) {
+		cout << "| " << setw(12) << i - code_index + 1 << " | " << A[i].c << " | " << setprecision(6) << fixed << A[i].P << " | ";
+		for (int j = 0; j < A[i].L + 1; j++) {
+			cout << static_cast<int>(codes[i][j]);
+		}
+		for (int j = A[i].L + 1; j < 18; j++) {
+			cout << " ";
+		}
+		cout << " | " << setw(7) << A[i].L + 1 << " |\n";
+		cout << "|-----------------------------------------------------------------------------|\n";
+		lgm += A[i].P * A[i].L;
+	}
+	cout << "_______________________________\n";
+	cout << "|   Entropy  |     Mid len     |\n";
+	cout << "|____________|_________________|\n";
+	cout << "| " << setw(10) << entropy << " | " << setw(10) << setprecision(5) << fixed << lgm << "      |\n";
+	cout << "|____________|_________________|\n";
+	cout << "|---------------------------|\n";
+	cout << "|     Entropy + 2 > Lsr     |\n";
+	cout << "|___________________________|\n";
+	cout << "|   " << setw(8) << entropy + 2 << " > " << setw(8) << setprecision(5) << fixed << lgm << "     |\n";
+	cout << "|___________________________|\n";
+}
+
+
+
+void mainloop(Record* unsorted_ind_array[], Record* sorted_ind_array[])
+{
+	int search_ind, search_n = -1;
+	while (true)
+	{
+		string chose = prompt(
+			"_____________________________\n"
+			"| 1: Show unsorted list     |\n"
+			"|___________________________|\n"
+			"| 2: Show sorted list       |\n"
+			"|___________________________|\n"
+			"| 3: Search                 |\n"
+			"|___________________________|\n"
+			"| 4: Tree                   |\n"
+			"|___________________________|\n"
+			"| 5: Coding                 |\n"
+			"|___________________________|\n"
+			"| Any key: Exit             |\n"
+			"|___________________________|\n");
+		switch (chose[0])
+		{
+		case '1':
+			system("CLS");
+			show_list(unsorted_ind_array);
+			break;
+		case '2':
+			system("CLS");
+			show_list(sorted_ind_array);
+			break;
+		case '3':
+			search(sorted_ind_array, search_ind, search_n);
+			break;
+		case '4':
+			if (search_n == -1)
+			{
+				cout << "| Please search anything before making tree |\n";
+			}
+			else
+			{
+				tree(&sorted_ind_array[search_ind], search_n);
+			}
+			break;
+		case '5': {
+			system("CLS");
+			gbc A[MAX_CHAR_LEN];
+			long double entropy = 0.0;
+			int sym_count = 0;
+			int sum = 0;
+			char** codes = new char* [MAX_CHAR_LEN];
+			for (int i = 0; i < MAX_CHAR_LEN; i++) {
+				codes[i] = new char[MAX_CHAR_LEN];
+			}
+			BaseCoding(A, &sum, &entropy, &sym_count, codes);
+			CodePrint(A, entropy, codes);
+			for (int i = 0; i < MAX_CHAR_LEN; i++) {
+				delete[] codes[i];
+			}
+			delete[] codes;
+			break;
+		}
+		default:
+			return;
+		}
+	}
+}
+
+int main()
+{
+	Node* head = load_to_memory();
+	int KDI[] = { 18, 10 };
+	if (!head)
+	{
+		cout << "File not found" << endl;
+		return 1;
+	}
+	auto unsorted_ind_arr = new Record * [N];
+	auto sorted_ind_arr = new Record * [N];
+	make_index_array(unsorted_ind_arr, head);
+	digitalSort(head, KDI);
+	make_index_array(sorted_ind_arr, head);
+	mainloop(unsorted_ind_arr, sorted_ind_arr);
+}
